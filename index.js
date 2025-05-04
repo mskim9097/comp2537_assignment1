@@ -72,10 +72,31 @@ app.post('/signupSubmit', async (req, res) => {
     const validationResult = schema.validate({name, email, password});
 
     if (validationResult.error != null) {
+        if(name == "") {
+            res.send(`
+                Name is required.<br><br>
+                <a href="/signup">Try again</a>
+            `);
+        }
+        if(email == "") {
+            res.send(`
+                Email is required.<br><br>
+                <a href="/signup">Try again</a>
+            `);
+        }
+        if(password == "") {
+            res.send(`
+                Password is required.<br><br>
+                <a href="/signup">Try again</a>
+            `);
+        }
+        /*
         res.send(`
             Invalid email/password combination.<br><br>
             <a href="/signup">Try again</a>
             `);
+        */
+        return;
     }
     var hashedPassword = await bcrypt.hash(password, saltRounds);
 
@@ -84,13 +105,66 @@ app.post('/signupSubmit', async (req, res) => {
     res.redirect("/members");
 });
 app.get('/login', (req, res) => {
-    res.send('login page');
+    res.send(`
+        log in
+        <form action='/loginSubmit' method='post'>
+            <input name='email' type='email' placeholder='email'/><br>
+            <input name='password' type='password' placeholder='password'/><br>
+            <button>Submit</button>
+        </form>
+        `);
+});
+app.post('/loginSubmit', async (req, res) => {
+    var email = req.body.email;
+    var password = req.body.password;
+
+    const schema = Joi.object(
+		{
+			email: Joi.string().email().max(30).required(),
+            password: Joi.string().max(20).required()
+		});
+    const validationResult = schema.validate({email, password});
+    if (validationResult.error != null) {
+        res.send(`
+            Invalid email/password combination.<br><br>
+            <a href="/login">Try again</a>
+            `);
+        return;
+    }
+
+    const result = await userCollection.find({email: email}).project({email: 1, name: 1, password: 1, _id: 1}).toArray();
+
+    if (result.length == 1 && await bcrypt.compare(password, result[0].password)) {
+        const name = result[0].name;
+		req.session.authenticated = true;
+		req.session.name = name;
+		req.session.cookie.maxAge = expireTime;
+
+		res.redirect('/members');
+		return;
+	} else {
+		res.send(`
+            User and password not found.<br><br>
+            <a href="/login">Try again</a>
+            `);
+		return;
+	}
 });
 app.get('/members', (req, res) => {
-    res.send('members page');
+    if(!req.session.authenticated) {
+        res.redirect('/');
+    }
+    var images = ['cat1.jpg', 'cat2.jpg', 'cat3.jpg'];
+    var randomImage = images[Math.floor(Math.random() * images.length)];
+    res.send(`
+        <h2>Hello, ${req.session.name}</h2>
+        <img src="/${randomImage}" alt="Random Cat" width="300" height="200"><br>
+        <button onclick="location.href='/logout'">Sign out</button>
+        `);
 });
 app.get('/logout', (req, res) => {
-    
+    req.session.destroy();
+    res.redirect('/');
 });
 
 app.use(express.static(__dirname + "/public"));
