@@ -40,11 +40,23 @@ app.use(session({
 }));
 
 app.get('/', (req, res) => {
-    res.send(`
-        <button onclick="location.href='/signup'">Sign up</button>
-        <br>
-        <button onclick="location.href='/login'">Log in</button>
-        `);
+    if(!req.session.authenticated) {
+        res.send(`
+            <button onclick="location.href='/signup'">Sign up</button>
+            <br>
+            <button onclick="location.href='/login'">Log in</button>
+            `);
+    } else {
+        res.send(`
+            Hello, ${req.session.name}!<br>
+            <button onclick="location.href='/members'">
+                Go to Members Area
+            </button>
+            <br>
+            <button onclick="location.href='/logout'">Logout</button>
+            `);
+    }
+    
 });
 
 app.get('/signup', (req, res) => {
@@ -83,6 +95,9 @@ app.post('/signupSubmit', async (req, res) => {
         if(password == "") {
             html += 'Password is required.<br>';
         }
+        if (html == '') {
+            html += 'Invalid name/email/password combination.<br>';
+        }
         html += `<br><a href="/signup">Try again</a>`;
 
         res.send(html);
@@ -91,6 +106,10 @@ app.post('/signupSubmit', async (req, res) => {
     var hashedPassword = await bcrypt.hash(password, saltRounds);
 
     await userCollection.insertOne({name: name, email: email, password: hashedPassword});
+
+    req.session.authenticated = true;
+	req.session.name = name;
+	req.session.cookie.maxAge = expireTime;
 
     res.redirect("/members");
 });
@@ -151,7 +170,7 @@ app.get('/members', (req, res) => {
     var images = ['cat1.jpg', 'cat2.jpg', 'cat3.jpg'];
     var randomImage = images[Math.floor(Math.random() * images.length)];
     res.send(`
-        <h2>Hello, ${req.session.name}</h2>
+        <h1>Hello, ${req.session.name}.</h1>
         <img src="/${randomImage}" alt="Random Cat" width="300" height="200"><br>
         <button onclick="location.href='/logout'">Sign out</button>
         `);
