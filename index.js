@@ -10,14 +10,13 @@ const app = express();
 const port = process.env.PORT || 3000;
 const Joi = require("joi");
 
-const expireTime = 24 * 60 * 60 * 1000;
+const expireTime = 60 * 60 * 1000;
 
 const mongodb_host = process.env.MONGODB_HOST;
 const mongodb_user = process.env.MONGODB_USER;
 const mongodb_password = process.env.MONGODB_PASSWORD;
 const mongodb_database = process.env.MONGODB_DATABASE;
 const mongodb_session_secret = process.env.MONGODB_SESSION_SECRET;
-
 const node_session_secret = process.env.NODE_SESSION_SECRET;
 
 var {database} = include('databaseConnection');
@@ -59,6 +58,7 @@ app.get('/signup', (req, res) => {
         </form>
         `);
 });
+
 app.post('/signupSubmit', async (req, res) => {
     var name = req.body.name;
     var email = req.body.email;
@@ -72,30 +72,20 @@ app.post('/signupSubmit', async (req, res) => {
     const validationResult = schema.validate({name, email, password});
 
     if (validationResult.error != null) {
+        var html = '';
+
         if(name == "") {
-            res.send(`
-                Name is required.<br><br>
-                <a href="/signup">Try again</a>
-            `);
+            html += 'Name is required.<br>';
         }
         if(email == "") {
-            res.send(`
-                Email is required.<br><br>
-                <a href="/signup">Try again</a>
-            `);
+            html += 'Email is required.<br>';
         }
         if(password == "") {
-            res.send(`
-                Password is required.<br><br>
-                <a href="/signup">Try again</a>
-            `);
+            html += 'Password is required.<br>';
         }
-        /*
-        res.send(`
-            Invalid email/password combination.<br><br>
-            <a href="/signup">Try again</a>
-            `);
-        */
+        html += `<br><a href="/signup">Try again</a>`;
+
+        res.send(html);
         return;
     }
     var hashedPassword = await bcrypt.hash(password, saltRounds);
@@ -104,6 +94,7 @@ app.post('/signupSubmit', async (req, res) => {
 
     res.redirect("/members");
 });
+
 app.get('/login', (req, res) => {
     res.send(`
         log in
@@ -114,6 +105,7 @@ app.get('/login', (req, res) => {
         </form>
         `);
 });
+
 app.post('/loginSubmit', async (req, res) => {
     var email = req.body.email;
     var password = req.body.password;
@@ -150,9 +142,11 @@ app.post('/loginSubmit', async (req, res) => {
 		return;
 	}
 });
+
 app.get('/members', (req, res) => {
     if(!req.session.authenticated) {
         res.redirect('/');
+        return;
     }
     var images = ['cat1.jpg', 'cat2.jpg', 'cat3.jpg'];
     var randomImage = images[Math.floor(Math.random() * images.length)];
@@ -162,6 +156,7 @@ app.get('/members', (req, res) => {
         <button onclick="location.href='/logout'">Sign out</button>
         `);
 });
+
 app.get('/logout', (req, res) => {
     req.session.destroy();
     res.redirect('/');
