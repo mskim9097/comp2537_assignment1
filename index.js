@@ -96,7 +96,7 @@ app.post('/signupSubmit', async (req, res) => {
             html += 'Password is required.<br>';
         }
         if (html == '') {
-            html += 'Invalid name/email/password combination.<br>';
+            html += 'Name, email, or password is not in a valid format.<br>';
         }
         html += `<br><a href="/signup">Try again</a>`;
 
@@ -137,7 +137,7 @@ app.post('/loginSubmit', async (req, res) => {
     const validationResult = schema.validate({email, password});
     if (validationResult.error != null) {
         res.send(`
-            Invalid email/password combination.<br><br>
+            Email or password is not in a valid format.<br><br>
             <a href="/login">Try again</a>
             `);
         return;
@@ -155,7 +155,7 @@ app.post('/loginSubmit', async (req, res) => {
 		return;
 	} else {
 		res.send(`
-            User and password not found.<br><br>
+            Invalid email/password combination.<br><br>
             <a href="/login">Try again</a>
             `);
 		return;
